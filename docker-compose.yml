@@ -1,12 +1,52 @@
-# docker-compose.yml (provisório)
 services:
     db:
         image: postgres:16
+        container_name: anomalies_db
         environment:
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: root
             POSTGRES_DB: anomalies
+            TZ: America/Sao_Paulo
         ports:
             - "5432:5432"
         volumes:
-            - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+            - pgdata:/var/lib/postgresql/data
+            - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -h 127.0.0.1 -U postgres -d anomalies",
+                ]
+            interval: 5s
+            timeout: 5s
+            retries: 12
+            start_period: 10s
+
+    api:
+        build: .
+        container_name: anomalies_api
+        environment:
+            DATABASE_URL: postgresql+psycopg2://postgres:root@db:5432/anomalies
+            TZ: America/Sao_Paulo
+        ports:
+            - "8000:8000"
+        depends_on:
+            db:
+                condition: service_healthy
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "python",
+                    "-c",
+                    "import urllib.request; urllib.request.urlopen('http://localhost:8000/', timeout=3)",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+        restart: unless-stopped
+
+volumes:
+    pgdata:
