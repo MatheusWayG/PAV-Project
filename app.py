@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from config.error_handlers import register_error_handlers
-from routes import client_routes, rule_routes, transaction_routes
+from routes import alert_routes, client_routes, rule_routes, transaction_routes
 
 app = FastAPI(
     title="Financial Anomaly Detection API",
@@ -13,6 +13,8 @@ register_error_handlers(app)
 app.include_router(client_routes.router)
 app.include_router(rule_routes.router)
 app.include_router(transaction_routes.router)
+app.include_router(alert_routes.router)
+
 
 @app.get("/", tags=["Health"])
 def health_check():

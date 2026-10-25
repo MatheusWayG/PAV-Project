@@ -1,6 +1,9 @@
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from datetime import datetime
 
+from sqlalchemy import select
+from sqlalchemy.orm import Session, selectinload
+
+from entities.alert import Alert
 from entities.transaction import Transaction
 from repositories.base_repository import BaseRepository
 
@@ -15,7 +18,9 @@ class TransactionRepository(BaseRepository[Transaction]):
         skip: int = 0,
         limit: int = 100,
     ) -> list[Transaction]:
-        statement = select(Transaction)
+        statement = select(Transaction).options(
+            selectinload(Transaction.alerts).joinedload(Alert.rule)
+        )
 
         if client_id is not None:
             statement = statement.where(Transaction.client_id == client_id)
@@ -28,5 +33,25 @@ class TransactionRepository(BaseRepository[Transaction]):
             .offset(skip)
             .limit(limit)
         )
-        
+
+        return list(self._db.scalars(statement))
+
+    def list_history(
+        self,
+        client_id: int,
+        since: datetime,
+        until: datetime,
+        exclude_id: int | None = None,
+    ) -> list[Transaction]:
+        statement = select(Transaction).where(
+            Transaction.client_id == client_id,
+            Transaction.occurred_at >= since,
+            Transaction.occurred_at <= until,
+        )
+
+        if exclude_id is not None:
+            statement = statement.where(Transaction.id != exclude_id)
+
+        statement = statement.order_by(Transaction.occurred_at, Transaction.id)
+
         return list(self._db.scalars(statement))

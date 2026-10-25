@@ -25,6 +25,9 @@ class Alert(Base):
             "transaction_id", "rule_id", name="uq_alerts_transaction_rule"
         ),
         CheckConstraint("points > 0", name="ck_alerts_points_positive"),
+        CheckConstraint(
+            r"reason !~ '^\s*$'", name="ck_alerts_reason_not_blank"
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -42,6 +45,10 @@ class Alert(Base):
 
     transaction: Mapped["Transaction"] = relationship(back_populates="alerts")
     rule: Mapped["Rule"] = relationship(back_populates="alerts")
+
+    @property
+    def rule_code(self) -> str:
+        return self.rule.code
 
     def __repr__(self) -> str:
         return f"<Alert id={self.id} rule_id={self.rule_id} points={self.points}>"

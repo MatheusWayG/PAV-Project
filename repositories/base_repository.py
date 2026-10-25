@@ -19,7 +19,6 @@ class BaseRepository(Generic[ModelT]):
             .offset(skip)
             .limit(limit)
         )
-
         return list(self._db.scalars(statement))
 
     def get_by_id(self, entity_id: int) -> ModelT | None:
@@ -35,12 +34,15 @@ class BaseRepository(Generic[ModelT]):
     def update(self, entity: ModelT) -> ModelT:
         self._commit()
         self._db.refresh(entity)
-        
+
         return entity
 
     def delete(self, entity: ModelT) -> None:
         self._db.delete(entity)
         self._commit()
+
+    def flush(self) -> None:
+        self._db.flush()
 
     def _commit(self) -> None:
         try:
