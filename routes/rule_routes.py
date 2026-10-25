@@ -21,7 +21,7 @@ def create_rule(
 
 @router.get("", response_model=list[RuleOut])
 def list_rules(
-    skip: int = Query(0, ge=0),
+    skip: int = Query(0, ge=0, le=2_147_483_647),
     limit: int = Query(100, ge=1, le=500),
     controller: RuleController = Depends(get_rule_controller),
 ):

@@ -2,23 +2,28 @@ from datetime import datetime, timedelta
 
 from config.clock import now, to_naive_local
 from config.exceptions import BusinessRuleError, NotFoundError
+from entities.alert import Alert
+from entities.client import Client
 from entities.transaction import Classification, Transaction
 from repositories.client_repository import ClientRepository
+from repositories.rule_repository import RuleRepository
 from repositories.transaction_repository import TransactionRepository
 from schemas.transaction_schema import TransactionCreate, TransactionUpdate
-
+from services.detection_engine import DetectionEngine
+from services.rules.anomaly_rule import EvaluationContext
 
 class TransactionService:
-    # Small margin for clock differences between the client and the server.
     FUTURE_TOLERANCE = timedelta(minutes=1)
 
     def __init__(
         self,
         repository: TransactionRepository,
         client_repository: ClientRepository,
+        rule_repository: RuleRepository,
     ) -> None:
         self._repository = repository
         self._client_repository = client_repository
+        self._rule_repository = rule_repository
 
     def list_transactions(
         self,
@@ -56,10 +61,10 @@ class TransactionService:
         values = data.model_dump()
         values["transaction_type"] = data.transaction_type.value
         values["occurred_at"] = self._validated_date(data.occurred_at)
-
         transaction = Transaction(**values)
 
-        #TODO: the detection engine will evaluate the new transaction here.
+        self._analyze(transaction, client)
+
         return self._repository.add(transaction)
 
     def update_transaction(
@@ -73,13 +78,46 @@ class TransactionService:
         transaction.location = data.location
         transaction.occurred_at = self._validated_date(data.occurred_at)
 
-        self._reevaluate(transaction)
+        # An edited transaction must be analysed again: the old alerts no
+        # longer apply. They are deleted first, because the new analysis may
+        # flag the same rule again (alerts are unique per transaction + rule).
+        transaction.alerts.clear()
+        self._repository.flush()
 
+        client = self._client_repository.get_by_id(transaction.client_id)
+        self._analyze(transaction, client)
         return self._repository.update(transaction)
 
     def delete_transaction(self, transaction_id: int) -> None:
         transaction = self.get_transaction(transaction_id)
         self._repository.delete(transaction)
+
+    def _analyze(self, transaction: Transaction, client: Client) -> None:
+        engine = DetectionEngine(self._rule_repository.list_active())
+
+        history = []
+
+        if engine.history_window_minutes > 0:
+            since = transaction.occurred_at - timedelta(
+                minutes=engine.history_window_minutes
+            )
+            history = self._repository.list_history(
+                client.id, since, transaction.occurred_at, transaction.id
+            )
+
+        analysis = engine.analyze(EvaluationContext(transaction, client, history))
+
+        transaction.risk_score = analysis.score
+        transaction.classification = analysis.classification.value
+
+        for finding in analysis.findings:
+            transaction.alerts.append(
+                Alert(
+                    rule_id=finding.rule_id,
+                    reason=finding.reason,
+                    points=finding.points,
+                )
+            )
 
     def _validated_date(self, occurred_at: datetime) -> datetime:
         local_time = to_naive_local(occurred_at)
@@ -90,15 +128,3 @@ class TransactionService:
             )
         
         return local_time
-
-    @staticmethod
-    def _reevaluate(transaction: Transaction) -> None:
-        """An edited transaction must be analysed again.
-
-        The old analysis no longer applies, so its alerts and score are
-        discarded. Next step: the detection engine will be called here to
-        produce the new score and alerts.
-        """
-        transaction.alerts.clear()
-        transaction.risk_score = 0
-        transaction.classification = Classification.NORMAL.value

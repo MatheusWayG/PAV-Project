@@ -5,6 +5,7 @@ from config.database import get_db
 from controllers.transaction_controller import TransactionController
 from entities.transaction import Classification
 from repositories.client_repository import ClientRepository
+from repositories.rule_repository import RuleRepository
 from repositories.transaction_repository import TransactionRepository
 from schemas.transaction_schema import (
     TransactionCreate,
@@ -18,7 +19,10 @@ router = APIRouter(prefix="/transactions", tags=["Transactions"])
 def get_transaction_controller(
     db: Session = Depends(get_db),
 ) -> TransactionController:
-    service = TransactionService(TransactionRepository(db), ClientRepository(db))
+    service = TransactionService(
+        TransactionRepository(db), ClientRepository(db), RuleRepository(db)
+    )
+
     return TransactionController(service)
 
 @router.post("", response_model=TransactionOut, status_code=status.HTTP_201_CREATED)
@@ -32,7 +36,7 @@ def create_transaction(
 def list_transactions(
     client_id: int | None = Query(None, gt=0),
     classification: Classification | None = Query(None),
-    skip: int = Query(0, ge=0),
+    skip: int = Query(0, ge=0, le=2_147_483_647),
     limit: int = Query(100, ge=1, le=500),
     controller: TransactionController = Depends(get_transaction_controller),
 ):

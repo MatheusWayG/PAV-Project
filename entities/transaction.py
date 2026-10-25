@@ -75,10 +75,11 @@ class Transaction(Base):
         back_populates="transaction",
         cascade="all, delete-orphan",
         passive_deletes=True,
+        order_by="Alert.id",
     )
- 
+
     def __repr__(self) -> str:
         return (
             f"<Transaction id={self.id} amount={self.amount} "
             f"classification={self.classification}>"
-        ) 
+        )

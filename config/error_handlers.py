@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DataError, IntegrityError
 
 from config.exceptions import AppError
 
@@ -23,6 +23,7 @@ def register_error_handlers(app: FastAPI) -> None:
             }
             for error in exc.errors()
         ]
+
         return JSONResponse(
             status_code=422,
             content={"detail": "Invalid data.", "errors": errors},
@@ -35,4 +36,11 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=409,
             content={"detail": "The operation violates a data integrity rule."},
+        )
+
+    @app.exception_handler(DataError)
+    async def handle_data_error(request: Request, exc: DataError) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={"detail": "A value is outside the range accepted by the database."},
         )

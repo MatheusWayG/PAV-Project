@@ -21,7 +21,7 @@ def create_client(
 
 @router.get("", response_model=list[ClientOut])
 def list_clients(
-    skip: int = Query(0, ge=0),
+    skip: int = Query(0, ge=0, le=2_147_483_647),
     limit: int = Query(100, ge=1, le=500),
     controller: ClientController = Depends(get_client_controller),
 ):
