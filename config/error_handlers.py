@@ -8,8 +8,11 @@ from config.exceptions import AppError
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
+        headers = getattr(exc, "headers", None)
         return JSONResponse(
-            status_code=exc.status_code, content={"detail": exc.message}
+            status_code=exc.status_code,
+            content={"detail": exc.message},
+            headers=headers,
         )
 
     @app.exception_handler(RequestValidationError)

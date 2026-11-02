@@ -1,12 +1,18 @@
-from entities.client import Client
 from config.exceptions import BusinessRuleError, ConflictError, NotFoundError
+from entities.client import Client
 from repositories.client_repository import ClientRepository
 from schemas.client_schema import ClientCreate, ClientUpdate
 from services.cpf_validator import CpfValidator
+from services.password_hasher import PasswordHasher
 
 class ClientService:
-    def __init__(self, repository: ClientRepository) -> None:
+    def __init__(
+        self,
+        repository: ClientRepository,
+        password_hasher: PasswordHasher | None = None,
+    ) -> None:
         self._repository = repository
+        self._password_hasher = password_hasher or PasswordHasher()
 
     def list_clients(self, skip: int = 0, limit: int = 100) -> list[Client]:
         return self._repository.list_all(skip, limit)
@@ -19,6 +25,9 @@ class ClientService:
         
         return client
 
+    def get_me(self, current_client: Client) -> Client:
+        return current_client
+
     def create_client(self, data: ClientCreate) -> Client:
         cpf = self._validated_cpf(data.cpf)
 
@@ -27,6 +36,10 @@ class ClientService:
 
         values = data.model_dump()
         values["cpf"] = cpf
+        password = values.pop("password", None)
+        if not password:
+            raise BusinessRuleError("Password is required.")
+        values["password_hash"] = self._password_hasher.hash(password)
 
         return self._repository.add(Client(**values))
 
@@ -40,6 +53,9 @@ class ClientService:
 
         values = data.model_dump()
         values["cpf"] = cpf
+        password = values.pop("password", None)
+        if password:
+            client.password_hash = self._password_hasher.hash(password)
 
         for field, value in values.items():
             setattr(client, field, value)

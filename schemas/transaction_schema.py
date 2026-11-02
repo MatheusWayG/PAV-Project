@@ -4,7 +4,6 @@ from decimal import Decimal
 from pydantic import ConfigDict, Field
 
 from schemas.base_schema import BaseSchema
-
 from entities.transaction import Classification, TransactionType
 from schemas.alert_schema import AlertOut
 
@@ -16,7 +15,7 @@ class TransactionBase(BaseSchema):
     occurred_at: datetime
 
 class TransactionCreate(TransactionBase):
-    client_id: int = Field(gt=0)
+    client_id: int | None = Field(default=None, gt=0)
 
 class TransactionUpdate(TransactionBase):
     pass

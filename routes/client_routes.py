@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 
 from config.database import get_db
 from controllers.client_controller import ClientController
+from dependencies import get_current_client
+from entities.client import Client
 from repositories.client_repository import ClientRepository
 from schemas.client_schema import ClientCreate, ClientOut, ClientUpdate
 from services.client_service import ClientService
@@ -26,6 +28,13 @@ def list_clients(
     controller: ClientController = Depends(get_client_controller),
 ):
     return controller.list_clients(skip, limit)
+
+@router.get("/me", response_model=ClientOut)
+def get_me(
+    current_client: Client = Depends(get_current_client),
+    controller: ClientController = Depends(get_client_controller),
+):
+    return controller.get_me(current_client)
 
 @router.get("/{client_id}", response_model=ClientOut)
 def get_client(

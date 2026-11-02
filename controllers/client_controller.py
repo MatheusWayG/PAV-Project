@@ -1,3 +1,4 @@
+from entities.client import Client
 from schemas.client_schema import ClientCreate, ClientOut, ClientUpdate
 from services.client_service import ClientService
 
@@ -11,6 +12,9 @@ class ClientController:
 
     def get_client(self, client_id: int) -> ClientOut:
         return ClientOut.model_validate(self._service.get_client(client_id))
+
+    def get_me(self, current_client: Client) -> ClientOut:
+        return ClientOut.model_validate(self._service.get_me(current_client))
 
     def create_client(self, data: ClientCreate) -> ClientOut:
         return ClientOut.model_validate(self._service.create_client(data))

@@ -47,8 +47,13 @@ class TransactionService:
         
         return transaction
 
-    def create_transaction(self, data: TransactionCreate) -> Transaction:
-        client = self._client_repository.get_by_id(data.client_id)
+    def create_transaction(
+        self, data: TransactionCreate, client: Client | None = None
+    ) -> Transaction:
+        if client is None:
+            if data.client_id is None:
+                raise BusinessRuleError("Client ID is required.")
+            client = self._client_repository.get_by_id(data.client_id)
 
         if client is None:
             raise BusinessRuleError(f"Client {data.client_id} does not exist.")
@@ -59,6 +64,7 @@ class TransactionService:
             )
 
         values = data.model_dump()
+        values["client_id"] = client.id
         values["transaction_type"] = data.transaction_type.value
         values["occurred_at"] = self._validated_date(data.occurred_at)
         transaction = Transaction(**values)

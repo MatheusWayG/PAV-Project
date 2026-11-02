@@ -14,10 +14,11 @@ class ClientBase(BaseSchema):
     usual_end_time: time
 
 class ClientCreate(ClientBase):
-    pass
+    password: str = Field(min_length=6, max_length=128)
 
 class ClientUpdate(ClientBase):
     active: bool
+    password: str | None = Field(default=None, min_length=6, max_length=128)
 
 class ClientOut(ClientBase):
     model_config = ConfigDict(from_attributes=True)

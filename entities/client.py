@@ -10,13 +10,14 @@ from config.database import Base
 if TYPE_CHECKING:
     from entities.transaction import Transaction
 
- 
+
 class Client(Base):
     __tablename__ = "clients"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100))
     cpf: Mapped[str] = mapped_column(String(11), unique=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
     monthly_income: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     usual_city: Mapped[str] = mapped_column(String(80))
     usual_start_time: Mapped[time] = mapped_column(Time)

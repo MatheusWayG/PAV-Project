@@ -17,3 +17,10 @@ class ConflictError(AppError):
 
 class BusinessRuleError(AppError):
     status_code = 422
+
+class UnauthorizedError(AppError):
+    status_code = 401
+
+    def __init__(self, message: str, headers: dict[str, str] | None = None) -> None:
+        super().__init__(message)
+        self.headers = headers or {"WWW-Authenticate": "Bearer"}

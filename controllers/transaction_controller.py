@@ -1,3 +1,4 @@
+from entities.client import Client
 from entities.transaction import Classification
 from schemas.transaction_schema import (
     TransactionCreate,
@@ -26,8 +27,10 @@ class TransactionController:
         transaction = self._service.get_transaction(transaction_id)
         return TransactionOut.model_validate(transaction)
 
-    def create_transaction(self, data: TransactionCreate) -> TransactionOut:
-        transaction = self._service.create_transaction(data)
+    def create_transaction(
+        self, data: TransactionCreate, client: Client | None = None
+    ) -> TransactionOut:
+        transaction = self._service.create_transaction(data, client=client)
         return TransactionOut.model_validate(transaction)
 
     def update_transaction(
